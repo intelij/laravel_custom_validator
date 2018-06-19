@@ -1,0 +1,61 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: khululekanimkhonza
+ * Date: 19/06/2018
+ * Time: 10:26
+ */
+
+namespace App\Services\Validation;
+
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Validator;
+
+/*
+ * It's important to extend the Validator class
+ * By doing that we make sure we keep all the other rules as well!
+ * Now if you want to override a rule you can do that here as well
+ * For now we will only focus on creating rules
+ */
+class CustomValidation extends Validator
+{
+    /*
+     * Laravel keeps a certain convention for rules
+     * So the function is called validateGreaterThan
+     * Then the rule will be greater_than
+     *
+     * A validation rule accepts three parameters
+     * $attribute This is the name of the input
+     * $value This is the value of the input
+     * $parameters This is a parameter for the rule, so greater_than:1,2 has two parameters
+     * the $parameters are returned as an array so for the first parameter: $parameters[0]
+     *
+     * $attribute Input name
+     * $value Input value
+     * $parameters Table, field1
+     */
+    public function validateUniqueWith($attribute, $value, $parameters)
+    {
+        /*
+         * Now that we have our data we can check for the data
+         * We first grab the correct table which is passed to the function
+         * Now we need to do some checking using Eloquent
+         */
+        $result = DB::table($parameters[0])
+            ->where(
+                function($query) use ($attribute, $value, $parameters) {
+                    /* with soft deletes in place we need to make sure that the deleted item does not cause any conflicts */
+                    $query->where($attribute, '=', $value)->where($parameters[1], '=', $value)->where('deleted_at', '=', null)->first();
+                });
+
+        /*
+         * Now we check if we have a record
+         * If we do have a record we return false and the validation will fail
+         * If we can't find a record we return true and the validation will succeed
+         */
+
+        return $result ? false : true; // custom message to configure -> 'The :attribute already exists.'
+
+    }
+
+}
